@@ -1,0 +1,6 @@
+# API framework and server
+uvicorn
+fastapi
+
+# Code
+pydantic
