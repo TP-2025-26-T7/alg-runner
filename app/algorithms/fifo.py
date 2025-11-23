@@ -1,7 +1,7 @@
 from app.models.schema import Car, Junction
 from .utils import sq_distance_from_junction
 
-def dispatch(cars: list[Car], junctions: list[Junction], speed_decay: float = 3.0) -> None:
+def dispatch(cars: list[Car], junctions: list[Junction], speed_decay: float = 3.0) -> list[Car]:
     """
     Original algorithm from stocars repository.
     Removed unnecessary parts and compacted the code.
@@ -15,4 +15,5 @@ def dispatch(cars: list[Car], junctions: list[Junction], speed_decay: float = 3.
         for i, car in enumerate(queue[1:], start=1):
             car.speed = max(1.0, base_speed - i * speed_decay)
 
+    return cars
 
