@@ -1,4 +1,3 @@
-from typing import Optional
 from pydantic import BaseModel, Field, AliasChoices
 from .schema import *
 
@@ -9,6 +8,7 @@ class DispatchRequest(BaseModel):
     )
     cars: list[Car] = Field(default_factory=list)
 
-class JunctionsRequest(BaseModel):
+class SetupRequest(BaseModel):
     junctions: list[Junction] = Field(default_factory=list)
+    roads: list[Road] = Field(default_factory=list)
     overwrite: bool = False

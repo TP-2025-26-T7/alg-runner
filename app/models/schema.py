@@ -1,5 +1,8 @@
-from pydantic import BaseModel, constr, conint
 from typing import Optional
+from functools import cached_property
+
+from pydantic import BaseModel, constr, conint
+from shapely.geometry import LineString
 
 class Car(BaseModel):
     car_id: constr(min_length=1, max_length=64)
@@ -22,14 +25,19 @@ class Car(BaseModel):
         return self.car_id == other.car_id
 
 
-class Edge(BaseModel):
-    value: constr(min_length=1, max_length=64)
+class Road(BaseModel):
+    id: constr(min_length=1, max_length=64)
+    polyline: list[list[float]]
+
+    @cached_property
+    def geometry(self) -> LineString:
+        return LineString(self.polyline)
 
 
 class Junction(BaseModel):
     junction_id: constr(min_length=1, max_length=64)
     edge_count: conint(ge=0, le=2**32 - 1) # uint32_t
-    edges: list[Edge]
+    edges: list[Road]
     x: Optional[float] = None
     y: Optional[float] = None
 
@@ -40,5 +48,4 @@ class Junction(BaseModel):
         if not isinstance(other, Junction):
             return False
         return self.junction_id == other.junction_id
-
 
