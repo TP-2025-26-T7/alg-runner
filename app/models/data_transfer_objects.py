@@ -11,4 +11,5 @@ class DispatchRequest(BaseModel):
 class SetupRequest(BaseModel):
     junctions: list[Junction] = Field(default_factory=list)
     roads: list[Road] = Field(default_factory=list)
+    car_targets: dict[str, str] = Field(default_factory=dict) # car_id -> target_road_id
     overwrite: bool = False
