@@ -51,34 +51,57 @@ def _required_distance_to_speed(curr_speed: float, target_speed: float, accelera
     return required_distance
 
 
-def _should_accelerate_to(curr_speed: float, duration: float, distance: float) -> float:
+def _should_accelerate_to(curr_speed: float, duration: float, distance: float, speed_limit: float, acceleration: float, deceleration: float) -> float:
     """
     Calculate the target speed to reach within a given duration and distance. Assumes constant acceleration.
     :return: Speed to try to reach, in order to travel the given distance in the given duration.
     """
+    def bin_search(low_speed: float=0, high_speed: float=speed_limit, itr = 0, max_itr = 5, epsilon: float = 0.1) -> float:
+        mid = (low_speed + high_speed) / 2
+
+        if itr >= max_itr or low_speed*(1+epsilon) > high_speed:
+            return mid
+
+        distance_accelerating = _required_distance_to_speed(curr_speed, mid, acceleration=acceleration, deceleration=deceleration)
+        time_accelerating = distance_accelerating / ((curr_speed + mid) / 2)
+
+        if time_accelerating > duration or distance_accelerating > distance:
+            return bin_search(low_speed, mid, itr + 1, max_itr, epsilon)
+
+        time_cruising = duration - time_accelerating
+        distance_cruising = mid * time_cruising
+
+        traveled_distance = distance_accelerating + distance_cruising
+
+        # if close enough the final distance, return mid
+        if traveled_distance < distance:
+            if distance * (1 - epsilon) < traveled_distance:
+                return mid
+
+            return bin_search(mid, high_speed, itr + 1, max_itr, epsilon)
+
+        return bin_search(low_speed, mid, itr + 1, max_itr, epsilon)
+
     if duration <= 0:
         raise RuntimeError('Duration must be positive.')
 
-    target_speed = (2 * distance / duration) - curr_speed
 
-    should_accelerate = target_speed > curr_speed
-    if should_accelerate:
-        return target_speed
-
-    else:
-        return max(0.0, target_speed)
+    target_speed = bin_search()
+    return target_speed
 
 
 def max_target_speed(duration_s: float, max_distance: float, speed_limit: float, curr_speed: float, acceleration: float, breaking: float = 0, break_epsilon: float = 0.25) -> float:
     """
     Calculate the maximum target speed a car can reach within a given duration and distance, considering acceleration and breaking limits.
+
+    !!! Note: Edge cases with car going way above speed limit are not handled. !!!
     :param duration_s: time duration in seconds
     :param max_distance: maximum distance the car can travel before hitting an obstacle
     :param acceleration: acceleration rate in units per second squared
     :param breaking: breaking rate in units per second squared. 0 by default, in case we break just with negative acceleration.
     :param speed_limit: maximum speed limit in units per second
     :param curr_speed: current speed of the car in units per second
-    :param break_epsilon: leeway to account for the error in breaking distance calculation. Value between 0 and 1. Fraction of
+    :param break_epsilon: leeway to account for the error in breaking distance calculation. Value between 0 and 1.
     :return: maximum target speed in units per second
     """
 
@@ -94,7 +117,8 @@ def max_target_speed(duration_s: float, max_distance: float, speed_limit: float,
     if break_distance >= max_distance:
         return 0.0
 
-    target_speed = _should_accelerate_to(curr_speed, duration_s, max_distance - break_distance)
+    target_speed = _should_accelerate_to(curr_speed, duration_s, max_distance - break_distance, speed_limit, acceleration, breaking)
 
     # clamp the target speed to (0, speed_limit)
     return max(0.0, min(target_speed, speed_limit))
+
