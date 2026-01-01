@@ -1,4 +1,4 @@
-from app.models import Car
+from app.models import Car, Junction
 import app.utils.transformations as transform
 from typing import Callable, Literal
 
@@ -40,3 +40,6 @@ def calculate_priority(car: Car, cars_in_line: int, required_junction_segments, 
     else:
         raise ValueError("Invalid combine_mode. Use 'sum' or 'mult'.")
 
+
+def dispatch(cars: list[Car], junctions: list[Junction]) -> list[Car]:
+    pass
