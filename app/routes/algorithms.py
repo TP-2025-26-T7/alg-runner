@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from app.models import Car, DispatchRequest, Junction, RoadNetwork, SetupRequest, CarCache
 from app.algorithms import get_algorithm
-
+from app.utils.distance import set_current_road, set_next_junction
 router = APIRouter(tags=["algorithms"])
 
 @router.post("/setup")
@@ -60,6 +60,10 @@ def dispatch_cars(request: Request, payload: DispatchRequest) -> list[Car]:
         car.seconds_in_traffic = cached_car.seconds_in_traffic
         if not car.target_road_id and cached_car.target_road_id:
             car.target_road_id = cached_car.target_road_id
+        # recalculate road and junction in case the car crossed the junction
+        # !!! note: possible performance issue - consider optimizing if needed !!!
+        set_current_road(car, request.app.state.roads)
+        set_next_junction(car, junctions)
 
     if not junctions:
         # Fallback to payload-provided junctions so we can work without a separate /setup call

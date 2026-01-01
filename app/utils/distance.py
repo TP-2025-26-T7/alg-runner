@@ -1,4 +1,4 @@
-from app.models import Car
+from app.models import Car, RoadNetwork, Junction, get_road_end_coordinates
 from math import sqrt
 
 def sq_distance_from_junction(car: Car) -> float:
@@ -18,6 +18,27 @@ def distance_from_junction(car: Car) -> float:
     """
     distance_sq = sq_distance_from_junction(car)
     return sqrt(distance_sq) if distance_sq != float("inf") else float("inf")
+
+
+def set_next_junction(car: Car, junctions: list[Junction]):
+    target_point = get_road_end_coordinates(car.x, car.y, car.angle, road=car.road)
+    closest_junction = min(
+        junctions,
+        key=lambda junction: (junction.x - target_point[0]) ** 2 + (junction.y - target_point[1]) ** 2,
+        default=None
+    )
+    if closest_junction is None:
+        return
+
+    car.next_junction = closest_junction
+    car.next_junction_id = closest_junction.junction_id
+
+
+def set_current_road(car: Car, road_network: RoadNetwork) -> None:
+    road = road_network.get_road_for_point(car.x, car.y)
+    if road:
+        car.road = road
+        car.road_id = road.road_id
 
 
 def _required_distance_to_speed(curr_speed: float, target_speed: float, acceleration: float = 0,
