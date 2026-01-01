@@ -1,6 +1,7 @@
+from typing import Callable, Literal
+
 from app.models import Car, Junction
 import app.utils.transformations as transform
-from typing import Callable, Literal
 
 
 def calculate_priority(car: Car, cars_in_line: int, required_junction_segments, combine_mode: Literal["sum", "mult"] = "sum" ,**attribute_weight_funcs: Callable[[float, ...], float]) -> float:
@@ -42,4 +43,36 @@ def calculate_priority(car: Car, cars_in_line: int, required_junction_segments, 
 
 
 def dispatch(cars: list[Car], junctions: list[Junction]) -> list[Car]:
-    pass
+    # Group cars by upcoming junction
+    junction_to_cars: dict[str, list[Car]] = {}
+    for car in cars:
+        if not car.next_junction_id:
+            continue
+        junction_to_cars.setdefault(car.next_junction_id, []).append(car)
+
+    for junction in junctions:
+        car_queue = junction_to_cars.get(junction.junction_id, [])
+        if not car_queue:
+            continue
+
+        # Sort by priority (higher first) based on waiting time, distance, and current speed
+        scored = []
+        for c in car_queue:
+            required_segments = max(1, junction.crossing_segments_count(junction.connected_roads_ids[0], junction.connected_roads_ids[-1]) if junction.connected_roads_ids else 1)
+            score = calculate_priority(
+                c,
+                cars_in_line=len(car_queue),
+                required_junction_segments=required_segments,
+                seconds_in_traffic=lambda x: transform.exponential(x, max_value=10),
+                speed=lambda x: transform.logarithmic(x, base=5, multiplier=0.5),
+            )
+            scored.append((c, score))
+
+        scored.sort(key=lambda item: item[1], reverse=True)
+
+        # Assign speeds: highest priority keeps its speed, others slow down progressively
+        for idx, (car, _) in enumerate(scored):
+            decay = max(0.0, idx * 1.5)
+            car.speed = max(1.0, car.speed - decay)
+
+    return cars

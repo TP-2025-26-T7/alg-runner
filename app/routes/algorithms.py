@@ -1,6 +1,6 @@
 from typing import Callable
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from app.models import Car, DispatchRequest, Junction, RoadNetwork, SetupRequest
 from app.algorithms import get_algorithm
@@ -40,9 +40,14 @@ async def setup(request: Request, payload: SetupRequest):
 def dispatch_cars(request: Request, payload: DispatchRequest) -> list[Car]:
     alg_name = payload.algorithm_name
     algorithm: Callable[[list[Car], list[Junction]], list[Car]] = get_algorithm(alg_name)
+    junctions = getattr(request.app.state, "junctions", None)
 
-    junctions = request.app.state.junctions
     if not junctions:
-        raise ValueError("No junctions provided for dispatching cars.")
+        # Fallback to payload-provided junctions so we can work without a separate /setup call
+        request.app.state.junctions = payload.junctions or []
+        junctions = request.app.state.junctions
 
-    return algorithm(payload.cars, junctions)
+    try:
+        return algorithm(payload.cars, junctions)
+    except Exception as exc:  # Defensive: surface algorithm errors nicely
+        raise HTTPException(status_code=400, detail=f"Dispatch failed: {exc}")

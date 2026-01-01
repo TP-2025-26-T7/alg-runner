@@ -2,7 +2,7 @@ from typing import Optional
 from functools import cached_property
 from math import pi, dist
 
-from pydantic import BaseModel, Field, constr, conint, confloat
+from pydantic import BaseModel, ConfigDict, Field, constr, conint, confloat
 from shapely.geometry import LineString
 
 class Road(BaseModel):
@@ -24,12 +24,14 @@ class RoadConnection(Road):
 
 
 class Junction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     junction_id: constr(min_length=1, max_length=64)
-    connected_roads_count: conint(ge=0, le=2**32 - 1) # uint32_t
-    connected_roads_ids: list[constr(min_length=1, max_length=64)]
-    road_connections: list[RoadConnection] # pseudo roads between connected paths
-    x: float
-    y: float
+    connected_roads_count: conint(ge=0, le=2**32 - 1) = 0 # uint32_t
+    connected_roads_ids: list[constr(min_length=1, max_length=64)] = Field(default_factory=list)
+    road_connections: list[RoadConnection] = Field(default_factory=list) # pseudo roads between connected paths
+    x: Optional[float] = None
+    y: Optional[float] = None
 
     def __hash__(self):
         return hash(self.junction_id)
@@ -67,6 +69,9 @@ class Junction(BaseModel):
         :return: Number of segments the car will cross inside the junction
         """
 
+        if not self.connected_roads_ids:
+            return 0
+
         start_index = -1
         target_index = -1
         for i, road_id in enumerate(self.connected_roads_ids):
@@ -75,7 +80,7 @@ class Junction(BaseModel):
             if road_id == target_road_id:
                 target_index = i
         if start_index == -1 or target_index == -1:
-            raise ValueError("Start or target road not connected to this junction.")
+            return 0
         if target_index >= start_index:
             return target_index - start_index
         else:
@@ -100,23 +105,28 @@ class Car(BaseModel):
 
     - **road** & **next_junction** are calculated at runtime, CAN'T be provided by the user
     """
+    model_config = ConfigDict(extra="ignore")
+
     car_id: constr(min_length=1, max_length=64)
     x: float
     y: float
-    speed: float  # in units per second
-    wheel_rotation: confloat(ge=0, le=2 * pi)
-    rotation: confloat(ge=0, le=2 * pi)
-    acceleration: float
+    speed: float = 0.0  # in units per second
+    wheel_rotation: confloat(ge=0, le=2 * pi) = 0.0
+    rotation: confloat(ge=0, le=2 * pi) = 0.0
+    acceleration: float = 0.0
+
+    # Optional routing data coming from SUMO / central-unit
+    next_junction_id: Optional[str] = None
+    next_junction_x: Optional[float] = None
+    next_junction_y: Optional[float] = None
+    lane_id: Optional[str] = None
+    road_id: Optional[str] = None
 
     target_road_id: Optional[constr(min_length=1, max_length=64)] = None
     seconds_in_traffic: float = 0.0
 
     next_junction: Optional[Junction] = Field(default=None, exclude=True)
     road: Optional[Road] = Field(default=None, exclude=True)
-
-    @property
-    def next_junction_id(self) -> Optional[str]:
-        return self.next_junction.junction_id if self.next_junction else None
 
     def distance_from_next_junction(self, simple_mode: bool = True) -> Optional[float]:
         """

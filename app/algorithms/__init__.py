@@ -1,5 +1,5 @@
-from fifo import dispatch as fifo_dispatch
-from prioq import dispatch as priority_dispatch
+from .fifo import dispatch as fifo_dispatch
+from .prioq import dispatch as priority_dispatch
 
 _ALG_REGISTRY: dict[str, callable] = {
     "fifo": fifo_dispatch,

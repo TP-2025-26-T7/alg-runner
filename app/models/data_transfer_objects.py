@@ -7,6 +7,7 @@ class DispatchRequest(BaseModel):
         validation_alias=AliasChoices("algorithm_name", "alg_name", "algorithm", "alg"), # Support multiple alias names to prevent mistakes
     )
     cars: list[Car] = Field(default_factory=list)
+    junctions: list[Junction] = Field(default_factory=list)
 
 class SetupRequest(BaseModel):
     junctions: list[Junction] = Field(default_factory=list)

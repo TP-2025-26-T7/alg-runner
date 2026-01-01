@@ -6,6 +6,9 @@ def sq_distance_from_junction(car: Car) -> float:
     Calculate squared distance from car to its next junction.
     Squared distance is used to avoid unnecessary square root calculations as we use the distances relatively for sorting.
     """
+    if car.next_junction_x is None or car.next_junction_y is None:
+        return float("inf")
+
     return (car.x - car.next_junction_x) ** 2 + (car.y - car.next_junction_y) ** 2
 
 
@@ -13,7 +16,8 @@ def distance_from_junction(car: Car) -> float:
     """
     Calculate Euclidean distance from car to its next junction.
     """
-    return sqrt(sq_distance_from_junction(car))
+    distance_sq = sq_distance_from_junction(car)
+    return sqrt(distance_sq) if distance_sq != float("inf") else float("inf")
 
 
 def binary_search(min_value: float, max_value: float, func) -> float:
