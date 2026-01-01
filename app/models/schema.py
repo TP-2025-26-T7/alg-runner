@@ -7,12 +7,30 @@ from shapely.geometry import LineString
 
 class Road(BaseModel):
     id: constr(min_length=1, max_length=64)
-    polyline: list[list[float]]
+    polyline: tuple[tuple[float, float], ...]
     recommended_speed: float
+
+    junction_start_id: Optional[constr(min_length=1, max_length=64)] = None
+    junction_end_id: Optional[constr(min_length=1, max_length=64)] = None
 
     @cached_property
     def geometry(self) -> LineString:
         return LineString(self.polyline)
+
+    def __len__(self) -> int:
+        return len(self.polyline)
+
+    def __getitem__(self, index: int) -> tuple[float, float]:
+        return self.polyline[index]
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    def __iter__(self):
+        return iter(self.polyline)
+
+    def __contains__(self, item) -> bool:
+        return item in self.polyline
 
 
 class RoadConnection(Road):
