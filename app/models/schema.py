@@ -99,7 +99,7 @@ class Car(BaseModel):
 
     - **rotation**: radians (0 to 2pi); Geographical orientation
 
-    - **target_road_id**: Provide only when changing road, otherwise leave as None to use cached value.
+    - **target_road_id**: Provide only when sending the car first time.
 
     - **target_road_id** & **seconds_in_traffic**: Loaded from cache.
 

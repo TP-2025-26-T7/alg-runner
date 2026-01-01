@@ -2,7 +2,7 @@ from typing import Callable
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app.models import Car, DispatchRequest, Junction, RoadNetwork, SetupRequest
+from app.models import Car, DispatchRequest, Junction, RoadNetwork, SetupRequest, CarCache
 from app.algorithms import get_algorithm
 
 router = APIRouter(tags=["algorithms"])
@@ -26,14 +26,22 @@ async def setup(request: Request, payload: SetupRequest):
     if not hasattr(request.app.state, "roads") or overwrite:
         request.app.state.roads = RoadNetwork()
 
+    if not hasattr(request.app.state, "carsCache") or overwrite:
+        request.app.state.cars_cache = []
+
     if overwrite:
         request.app.state.junctions = junctions_data.copy()
         request.app.state.roads = RoadNetwork(roads_data)
+        for key, value in payload.car_targets.items():
+            request.app.state.cars_cache.clear()
+            request.app.state.cars_cache.append(CarCache(car_id=key, target_road_id=value))
     else:
         request.app.state.junctions.extend(junctions_data)
         request.app.state.roads.extend(roads_data)
+        for key, value in payload.car_targets.items():
+            request.app.state.cars_cache.append(CarCache(car_id=key, target_road_id=value))
 
-    return {"count": len(request.app.state.junctions)}
+    return {"status": "success"}
 
 
 @router.post("/dispatch", response_model=list[Car])
@@ -41,6 +49,17 @@ def dispatch_cars(request: Request, payload: DispatchRequest) -> list[Car]:
     alg_name = payload.algorithm_name
     algorithm: Callable[[list[Car], list[Junction]], list[Car]] = get_algorithm(alg_name)
     junctions = getattr(request.app.state, "junctions", None)
+    cars: list[Car] = payload.cars
+    # Populate cars with cached data
+    cached_cars = request.app.state.cars_cache
+    for car in cars:
+        # Find cached data for the car
+        cached_car = next((c for c in cached_cars if c.car_id == car.car_id), None)
+        if not cached_car:
+            continue
+        car.seconds_in_traffic = cached_car.seconds_in_traffic
+        if not car.target_road_id and cached_car.target_road_id:
+            car.target_road_id = cached_car.target_road_id
 
     if not junctions:
         # Fallback to payload-provided junctions so we can work without a separate /setup call

@@ -20,27 +20,6 @@ def distance_from_junction(car: Car) -> float:
     return sqrt(distance_sq) if distance_sq != float("inf") else float("inf")
 
 
-def binary_search(min_value: float, max_value: float, func) -> float:
-    """
-    Perform binary search to find the maximum value in the range [min_value, max_value] for which func(value) is True.
-    :param min_value: minimum value of the search range
-    :param max_value: maximum value of the search range
-    :param func: function that takes a float and returns a boolean
-    :return: maximum value for which func(value) is True
-    """
-    left = min_value
-    right = max_value
-
-    while right - left > 1e-5:
-        mid = (left + right) / 2
-        if func(mid):
-            left = mid
-        else:
-            right = mid
-
-    return left
-
-
 def _required_distance_to_speed(curr_speed: float, target_speed: float, acceleration: float = 0,
                                deceleration: float = 0) -> float:
     """
