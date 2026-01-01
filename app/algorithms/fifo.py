@@ -1,5 +1,5 @@
 from app.models.schema import Car, Junction
-from .utils import sq_distance_from_junction
+from app.utils.junctions import sq_distance_from_junction
 
 def dispatch(cars: list[Car], junctions: list[Junction], speed_decay: float = 3.0) -> list[Car]:
     """

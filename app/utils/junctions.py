@@ -1,7 +1,6 @@
 from app.models import Car
 from math import sqrt
 
-
 def sq_distance_from_junction(car: Car) -> float:
     """
     Calculate squared distance from car to its next junction.
@@ -15,4 +14,3 @@ def distance_from_junction(car: Car) -> float:
     Calculate Euclidean distance from car to its next junction.
     """
     return sqrt(sq_distance_from_junction(car))
-
