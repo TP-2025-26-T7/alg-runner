@@ -140,6 +140,35 @@ class Junction(BaseModel):
         else:
             return len(self.connected_roads_ids) - (start_index - target_index)
 
+    def crossing_segments(self, start_road_id: str, target_road_id: str) -> list[int]:
+        """
+        Get the list of segments the car will cross inside the junction when going from start_road_id to target_road_id.
+
+        :param start_road_id: ID of the road the car is coming from
+        :param target_road_id: ID of the road the car is going to
+        :return: List of segment indices (1-based) the car will cross
+        """
+        segments = []
+        if not self.connected_roads_ids:
+            return segments
+
+        start_index = -1
+        target_index = -1
+        for i, road_id in enumerate(self.connected_roads_ids):
+            if road_id == start_road_id:
+                start_index = i
+            if road_id == target_road_id:
+                target_index = i
+        if start_index == -1 or target_index == -1:
+            return segments
+
+        index = start_index
+        while index != target_index:
+            index = (index + 1) % len(self.connected_roads_ids)
+            segments.append(index + 1)  # +1 to convert to 1-based segment index
+
+        return segments
+
 
 class Car(BaseModel):
     """
