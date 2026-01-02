@@ -2,8 +2,8 @@ from typing import Optional
 from functools import cached_property
 from math import pi, dist
 
-from pydantic import BaseModel, ConfigDict, Field, constr, conint, confloat
-from shapely.geometry import LineString
+from pydantic import BaseModel, ConfigDict, Field, constr, conint, confloat, model_validator
+from shapely.geometry import LineString, Polygon, Point
 
 class Road(BaseModel):
     id: constr(min_length=1, max_length=64)
@@ -51,6 +51,20 @@ class Junction(BaseModel):
     x: Optional[float] = None
     y: Optional[float] = None
 
+    junction_size: float = Field(default=1)
+
+    polygon: Optional[Polygon] = None
+
+    @model_validator(mode="after")
+    def _default_polygon(self):
+        if self.polygon is None:
+            half = self.junction_size / 2
+            self.polygon = Polygon([(self.x - half, self.y - half),
+                                    (self.x + half, self.y - half),
+                                    (self.x + half, self.y + half),
+                                    (self.x - half, self.y + half)])
+        return self
+
     def __hash__(self):
         return hash(self.junction_id)
 
@@ -58,6 +72,11 @@ class Junction(BaseModel):
         if not isinstance(other, Junction):
             return False
         return self.junction_id == other.junction_id
+
+    def is_point_inside(self, x: float, y: float) -> bool:
+        if not self.polygon:
+            return False
+        return self.polygon.contains(Point(x, y))
 
     def get_roads_connection(self, road_a_id: str, road_b_id: str) -> Optional[RoadConnection]:
         for connection in self.road_connections:
@@ -76,7 +95,7 @@ class Junction(BaseModel):
             T   | A| B|
             ____|__|__|____
                 | C| D|
-            ____|__|__|_____
+            ____|__|__|____
                 |  |  |
                 |  | S|
 
