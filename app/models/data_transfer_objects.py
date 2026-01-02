@@ -8,6 +8,7 @@ class DispatchRequest(BaseModel):
     )
     cars: list[Car] = Field(default_factory=list)
     junctions: list[Junction] = Field(default_factory=list)
+    next_request_in_seconds: float = 0.2 # Time until the next dispatch request is expected, default to 200ms
 
 class SetupRequest(BaseModel):
     junctions: list[Junction] = Field(default_factory=list)
