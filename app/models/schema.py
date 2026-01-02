@@ -168,6 +168,7 @@ class Car(BaseModel):
     wheel_rotation: confloat(ge=0, le=2 * pi) = 0.0
     rotation: confloat(ge=0, le=2 * pi) = 0.0
     acceleration: float = 0.0
+    breaking: Optional[float] = None
 
     # Optional routing data coming from SUMO / central-unit
     next_junction_id: Optional[str] = None
@@ -181,6 +182,12 @@ class Car(BaseModel):
 
     next_junction: Optional[Junction] = Field(default=None, exclude=True)
     road: Optional[Road] = Field(default=None, exclude=True)
+
+    @model_validator(mode="after")
+    def set_breaking_from_acceleration(self):
+        if self.breaking is None:
+            self.breaking = self.acceleration
+        return self
 
     def distance_from_next_junction(self, simple_mode: bool = True) -> Optional[float]:
         """
