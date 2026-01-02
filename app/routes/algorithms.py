@@ -39,6 +39,11 @@ async def setup(request: Request, payload: SetupRequest):
         for key, value in payload.car_targets.items():
             request.app.state.cars_cache.append(CarCache(car_id=key, target_road_id=value))
 
+    request.app.state.hyperparams = {
+        "slowdown_zone": payload.slowdown_zone,
+        "slowdown_rate": payload.slowdown_rate,
+    }
+
     return {"status": "success"}
 
 

@@ -134,7 +134,7 @@ def max_target_speed(duration_s: float, max_distance: float, speed_limit: float,
         return speed_limit
 
     # distance at which we are sure to be able to stop if needed (because the car won't go above speed_limit)
-    break_distance = _required_distance_to_speed(speed_limit, 0, deceleration=breaking) * (1 + break_epsilon)
+    break_distance = _required_distance_to_speed(max(curr_speed, speed_limit), 0, deceleration=breaking) * (1 + break_epsilon)
     if break_distance >= max_distance:
         return 0.0
 
