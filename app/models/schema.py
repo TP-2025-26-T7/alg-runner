@@ -1,4 +1,4 @@
-from typing import Optional, Protocol
+from typing import Optional, Protocol, Literal
 from functools import cached_property
 from math import pi, dist
 
@@ -77,6 +77,23 @@ class Junction(BaseModel):
         if not self.polygon:
             return False
         return self.polygon.contains(Point(x, y))
+
+    def get_segment_for_point(self, x: float, y: float) -> Literal[None, 1, 2, 3, 4]:
+        """
+        Works only for junctions with right-angle connections ('+', any rotation of 'T', '-' and 'I' shapes).
+        """
+        if not self.polygon or not self.is_point_inside(x, y) or len(self.connected_roads_ids) > 4:
+            return None
+
+        if x <= self.x and y > self.y:
+            return 1  # Top-Left
+        if x <= self.x and y <= self.y:
+            return 2  # Bottom-Left
+        if x >= self.x and y >= self.y:
+            return 3  # Top-Right
+        if x >= self.x and y >= self.y:
+            return 4  # Bottom-Right
+
 
     def get_roads_connection(self, road_a_id: str, road_b_id: str) -> Optional[RoadConnection]:
         for connection in self.road_connections:
