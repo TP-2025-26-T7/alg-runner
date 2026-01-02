@@ -1,10 +1,14 @@
 from typing import Callable, Literal
 
-from app.models import Car, Junction
+from app.models import Car, Junction, Road
 import app.utils.transformations as transform
+from app.utils.distance import max_target_speed
 
 
-def calculate_priority(car: Car, cars_in_line: int, required_junction_segments, combine_mode: Literal["sum", "mult"] = "sum" ,**attribute_weight_funcs: Callable[[float, ...], float]) -> float:
+def calculate_priority(car: Car, cars_in_line: int,
+                       required_junction_segments: int,
+                       combine_mode: Literal["sum", "mult"] = "sum",
+                       **attribute_weight_funcs: Callable[[float, ...], float]) -> float:
     """
     Calculate priority for a car based on:
 
@@ -45,47 +49,117 @@ def calculate_priority(car: Car, cars_in_line: int, required_junction_segments, 
 def dispatch(cars: list[Car],
              junctions: list[Junction],
              duration_s: float = 0.2,
-             slowdown_zone: float = 0,
+             junction_buffer_zone: float = 1.5,
+             slowdown_zone: float = 10,
              slowdown_rate: float = 1,
              **kwargs) -> list[Car]:
     """
     :param cars: Array of cars to dispatch
     :param junctions: Array of junctions in the road network
     :param duration_s: Frequency of dispatching cars in seconds.
+    :param junction_buffer_zone: How many units before the junction the car tries to go into the junction.
     :param slowdown_zone: Distance from junctions where speed limit is lowered.
     :param slowdown_rate: Rate at which speed is reduced in the slowdown zone (0 < rate < 1; e.g. 0.3 means 30% of original speed).
     :return: Cars with modified speeds according to priority-based dispatching.
     """
     # Group cars by upcoming junction
-    junction_to_cars: dict[str, list[Car]] = {}
+    junction_cars: dict[str, list[Car]] = {}
+    cars_leaving_junction: dict[Road, list[Car]] = {} # cars leaving per road
     for car in cars:
         if not car.next_junction_id:
-            continue
-        junction_to_cars.setdefault(car.next_junction_id, []).append(car)
+            cars_leaving_junction.setdefault(car.road, []).append(car)
+        else:
+            junction_cars.setdefault(car.next_junction_id, []).append(car)
+
+    for road, cars in cars_leaving_junction.items():
+        # !!! Note: Just sending them at speed limit for now. Fix later if safety issues arise. !!!
+        for car in cars:
+            car.speed = road.recommended_speed
 
     for junction in junctions:
-        car_queue = junction_to_cars.get(junction.junction_id, [])
-        if not car_queue:
+        # No cars on this junction, skip it
+        if junction.junction_id not in junction_cars:
             continue
 
-        # Sort by priority (higher first) based on waiting time, distance, and current speed
-        scored = []
-        for c in car_queue:
-            required_segments = max(1, junction.crossing_segments_count(junction.connected_roads_ids[0], junction.connected_roads_ids[-1]) if junction.connected_roads_ids else 1)
-            score = calculate_priority(
-                c,
-                cars_in_line=len(car_queue),
-                required_junction_segments=required_segments,
-                seconds_in_traffic=lambda x: transform.exponential(x, max_value=10),
-                speed=lambda x: transform.logarithmic(x, base=5, multiplier=0.5),
-            )
-            scored.append((c, score))
+        cars_at_junction = junction_cars[junction.junction_id]
+        road_cars: dict[str, list[Car]] = {}
+        is_car_inside = False # If cars are inside the junction, don't let others in until they leave
 
-        scored.sort(key=lambda item: item[1], reverse=True)
+        for car in cars_at_junction:
+            if not car.road_id:
+                continue
+            # if car already is inside the junction, the speed has been set already in previous iteration
+            if junction.is_point_inside(car.x, car.y):
+                is_car_inside = True
+                continue
+            road_cars.setdefault(car.road_id, list[Car]()).append(car)
 
-        # Assign speeds: highest priority keeps its speed, others slow down progressively
-        for idx, (car, _) in enumerate(scored):
-            decay = max(0.0, idx * 1.5)
-            car.speed = max(1.0, car.speed - decay)
+        # For each road, sort cars by distance to junction
+        for road_id, cars_on_road in road_cars.items():
+            cars_on_road.sort(key=lambda c: c.distance_from_next_junction())
 
+        prev_car_speed_per_road: dict[str, float] = {} # road_id -> speed of the previous car on this road
+        prev_car_distance_per_road: dict[str, float] = {road_id: 0.0 for road_id in road_cars}
+
+        # Send cars into the junction
+        if not is_car_inside:
+            taken_up_segments: set[int] = set() # segments occupied by cars in the junction
+            # get cars waiting to go to the junction (within junction_buffer_zone, first in line)
+            waiting_cars = []
+            for road_id, cars_on_road in road_cars.items():
+                try:
+                    if cars_on_road[0].distance_from_next_junction(simple_mode=True) <= junction_buffer_zone:
+                        waiting_cars.append(cars_on_road[0])
+                except IndexError:
+                    continue
+
+            while len(waiting_cars):
+                waiting_cars.sort(key=lambda c: calculate_priority(
+                    c,
+                    cars_in_line=len(road_cars.get(c.road_id, [])) - 1,
+                    required_junction_segments=junction.crossing_segments_count(c.road_id, c.target_road_id),
+                    **kwargs
+                ), reverse=True)
+
+                selected_car = waiting_cars.pop(0)
+                prev_car_distance_per_road.setdefault(selected_car.road_id, selected_car.distance_from_next_junction())
+
+                required_segments = junction.crossing_segments_count(selected_car.road_id, selected_car.target_road_id)
+                # if none of the segments are in taken_up_segments set, let the car go
+                if not any(seg in taken_up_segments for seg in range(required_segments)):
+                    # let the car go at recommended speed
+                    selected_road = selected_car.road
+                    if selected_road and selected_road.recommended_speed:
+                        selected_car.speed = selected_road.recommended_speed
+                        # if recommended speed not defined, keep current speed
+
+                    # mark segments as taken
+                    for seg in range(required_segments):
+                        taken_up_segments.add(seg)
+                else:
+                    selected_car.speed = 0
+
+                prev_car_speed_per_road.setdefault(selected_car.road_id, selected_car.speed)
+
+        # for each road, move the car as forward as possible.
+        for road_id, cars_on_road in road_cars.items():
+            while len(cars_on_road):
+                car = cars_on_road.pop(0)
+                prev_car_speed: float = prev_car_speed_per_road.setdefault(road_id, car.road.recommended_speed)
+                prev_distance: float = prev_car_distance_per_road.setdefault(road_id, 0.0)
+
+                if prev_car_speed > car.speed:
+                    car.speed = prev_car_speed
+                    continue
+
+                distance_from_next = car.distance_from_next_junction()
+                target_speed = max_target_speed(
+                    duration_s = duration_s,
+                    max_distance= distance_from_next - prev_distance,
+                    curr_speed=car.speed,
+                    speed_limit=car.road.recommended_speed if distance_from_next > slowdown_zone else car.road.recommended_speed * slowdown_rate,
+                    acceleration=car.acceleration,
+                    breaking=car.breaking)
+
+                car.speed = target_speed
     return cars
