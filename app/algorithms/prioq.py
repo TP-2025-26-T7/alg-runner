@@ -42,7 +42,20 @@ def calculate_priority(car: Car, cars_in_line: int, required_junction_segments, 
         raise ValueError("Invalid combine_mode. Use 'sum' or 'mult'.")
 
 
-def dispatch(cars: list[Car], junctions: list[Junction]) -> list[Car]:
+def dispatch(cars: list[Car],
+             junctions: list[Junction],
+             duration_s: float = 0.2,
+             slowdown_zone: float = 0,
+             slowdown_rate: float = 1,
+             **kwargs) -> list[Car]:
+    """
+    :param cars: Array of cars to dispatch
+    :param junctions: Array of junctions in the road network
+    :param duration_s: Frequency of dispatching cars in seconds.
+    :param slowdown_zone: Distance from junctions where speed limit is lowered.
+    :param slowdown_rate: Rate at which speed is reduced in the slowdown zone (0 < rate < 1; e.g. 0.3 means 30% of original speed).
+    :return: Cars with modified speeds according to priority-based dispatching.
+    """
     # Group cars by upcoming junction
     junction_to_cars: dict[str, list[Car]] = {}
     for car in cars:

@@ -1,8 +1,6 @@
-from typing import Callable
-
 from fastapi import APIRouter, HTTPException, Request
 
-from app.models import Car, DispatchRequest, Junction, RoadNetwork, SetupRequest, CarCache
+from app.models import Car, DispatchRequest, Junction, RoadNetwork, SetupRequest, CarCache, Algorithm
 from app.algorithms import get_algorithm
 from app.utils.distance import set_current_road, set_next_junction
 router = APIRouter(tags=["algorithms"])
@@ -47,8 +45,14 @@ async def setup(request: Request, payload: SetupRequest):
 @router.post("/dispatch", response_model=list[Car])
 def dispatch_cars(request: Request, payload: DispatchRequest) -> list[Car]:
     alg_name = payload.algorithm_name
-    algorithm: Callable[[list[Car], list[Junction]], list[Car]] = get_algorithm(alg_name)
+    algorithm: Algorithm = get_algorithm(alg_name)
+
     junctions = getattr(request.app.state, "junctions", None)
+    if not junctions:
+        # Fallback to payload-provided junctions so we can work without a separate /setup call
+        request.app.state.junctions = payload.junctions or []
+        junctions = request.app.state.junctions
+
     cars: list[Car] = payload.cars
     # Populate cars with cached data
     cached_cars = request.app.state.cars_cache
@@ -60,17 +64,14 @@ def dispatch_cars(request: Request, payload: DispatchRequest) -> list[Car]:
         car.seconds_in_traffic = cached_car.seconds_in_traffic
         if not car.target_road_id and cached_car.target_road_id:
             car.target_road_id = cached_car.target_road_id
+
         # recalculate road and junction in case the car crossed the junction
         # !!! note: possible performance issue - consider optimizing if needed !!!
         set_current_road(car, request.app.state.roads)
         set_next_junction(car, junctions)
 
-    if not junctions:
-        # Fallback to payload-provided junctions so we can work without a separate /setup call
-        request.app.state.junctions = payload.junctions or []
-        junctions = request.app.state.junctions
-
+    next_dispatch_in_seconds = payload.next_request_in_seconds
     try:
-        return algorithm(payload.cars, junctions)
+        return algorithm(payload.cars, junctions, duration_s=next_dispatch_in_seconds, **request.app.state.hyperparams)
     except Exception as exc:  # Defensive: surface algorithm errors nicely
         raise HTTPException(status_code=400, detail=f"Dispatch failed: {exc}")

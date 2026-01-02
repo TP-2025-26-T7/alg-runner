@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Protocol
 from functools import cached_property
 from math import pi, dist
 
@@ -211,3 +211,8 @@ class CarCache(BaseModel):
         if not isinstance(other, Car):
             return False
         return self.car_id == other.car_id
+
+
+class Algorithm(Protocol):
+    def __call__(self, cars: list[Car], junctions: list[Junction], duration_s: float, **kwargs) -> list[Car]:
+        ...

@@ -1,7 +1,7 @@
 from app.models.schema import Car, Junction
 from app.utils.distance import sq_distance_from_junction
 
-def dispatch(cars: list[Car], junctions: list[Junction], speed_decay: float = 3.0) -> list[Car]:
+def dispatch(cars: list[Car], junctions: list[Junction], speed_decay: float = 3.0, **kwargs) -> list[Car]:
     """
     Original algorithm from stocars repository.
     Removed unnecessary parts and compacted the code.
