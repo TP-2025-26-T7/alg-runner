@@ -5,7 +5,6 @@ class DispatchRequest(BaseModel):
     """
     :param algorithm_name: Name of the dispatch algorithm to use
     :param cars: List of cars to be dispatched
-    :param junctions: List of junctions in the road network
     :param next_request_in_seconds: Expected time until the next dispatch request. Default = 200ms
     """
     algorithm_name: str = Field(
@@ -13,7 +12,6 @@ class DispatchRequest(BaseModel):
         validation_alias=AliasChoices("algorithm_name", "alg_name", "algorithm", "alg"), # Support multiple alias names to prevent mistakes
     )
     cars: list[Car] = Field(default_factory=list)
-    junctions: list[Junction] = Field(default_factory=list)
     next_request_in_seconds: Optional[float] = 0.2
 
 
