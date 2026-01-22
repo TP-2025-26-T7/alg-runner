@@ -28,7 +28,7 @@ class SetupRequest(BaseModel):
     """
     junctions: list[Junction] = Field(default_factory=list)
     roads: list[Road] = Field(default_factory=list)
-    car_targets: dict[str, str] = Field(default_factory=dict) # car_id -> target_road_id
+    car_targets: Optional[dict[str, str]] = Field(default_factory=dict) # car_id -> target_road_id
     overwrite: bool = False
     slowdown_zone: Optional[float] = 3.0
     slowdown_rate: Optional[float] = 0.3
