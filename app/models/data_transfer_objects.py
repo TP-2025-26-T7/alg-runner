@@ -7,6 +7,7 @@ class DispatchRequest(BaseModel):
     :param cars: List of cars to be dispatched
     :param next_request_in_seconds: Expected time until the next dispatch request. Default = 200ms
     """
+    model_config = ConfigDict(extra="ignore")
     algorithm_name: str = Field(
         default="fifo",
         validation_alias=AliasChoices("algorithm_name", "alg_name", "algorithm", "alg"), # Support multiple alias names to prevent mistakes
@@ -24,6 +25,7 @@ class SetupRequest(BaseModel):
     :param slowdown_zone: Distance from junctions where speed limit is lowered
     :param slowdown_rate: Rate at which speed is reduced in the slowdown zone (0 < rate < 1; e.g. 0.3 means 30% of original speed)
     """
+    model_config = ConfigDict(extra="ignore")
     junctions: list[Junction] = Field(default_factory=list)
     roads: list[Road] = Field(default_factory=list)
     car_targets: Optional[dict[str, str]] = Field(default_factory=dict) # car_id -> target_road_id
