@@ -33,21 +33,12 @@ class Road(BaseModel):
         return item in self.polyline
 
 
-class RoadConnection(Road):
-    """
-    Pseudo road on the inside of the junction connecting two roads
-    """
-    road_a_id: constr(min_length=1, max_length=64)
-    road_b_id: constr(min_length=1, max_length=64)
-
-
 class Junction(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     junction_id: constr(min_length=1, max_length=64)
     connected_roads_count: conint(ge=0, le=2**32 - 1) = 0 # uint32_t
     connected_roads_ids: list[constr(min_length=1, max_length=64)] = Field(default_factory=list)
-    road_connections: list[RoadConnection] = Field(default_factory=list) # pseudo roads between connected paths
     x: Optional[float] = None
     y: Optional[float] = None
 
@@ -94,12 +85,6 @@ class Junction(BaseModel):
         if x >= self.x and y >= self.y:
             return 4  # Bottom-Right
 
-
-    def get_roads_connection(self, road_a_id: str, road_b_id: str) -> Optional[RoadConnection]:
-        for connection in self.road_connections:
-            if (connection.road_a_id == road_a_id and connection.road_b_id == road_b_id) \
-                    or (connection.road_a_id == road_b_id and connection.road_b_id == road_a_id):
-                return connection
 
     def crossing_segments_count(self, start_road_id: str, target_road_id: str) -> int:
         """
