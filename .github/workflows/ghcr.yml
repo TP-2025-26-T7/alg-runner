@@ -28,6 +28,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
+          tags: | 
             ghcr.io/tp-2025-26-t7/alg-runner:latest
             ghcr.io/tp-2025-26-t7/alg-runner:${{ github.sha }}
