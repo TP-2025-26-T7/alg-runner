@@ -32,5 +32,5 @@ jobs:
             ghcr.io/tp-2025-26-t7/alg-runner:latest
             ghcr.io/tp-2025-26-t7/alg-runner:${{ github.sha }}
           labels: |
-            org.opencontainers.image.source=https://github.com/$%7B%7B github.repository }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
