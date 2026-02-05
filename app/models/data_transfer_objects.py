@@ -12,7 +12,14 @@ class DispatchRequest(BaseModel):
         default="fifo",
         validation_alias=AliasChoices("algorithm_name", "alg_name", "algorithm", "alg"), # Support multiple alias names to prevent mistakes
     )
+    
     cars: list[Car] = Field(default_factory=list)
+    
+    junctions: list[Junction] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("junctions", "junction", "jx"),
+    )
+    
     next_request_in_seconds: Optional[float] = 0.2
 
 
