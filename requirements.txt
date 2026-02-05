@@ -1,9 +1,4 @@
-# API framework and server
-uvicorn
-fastapi
-
-# Functionality
+fastapi==0.99.1
+pydantic==1.10.13
+uvicorn[standard]==0.23.2
 shapely
-
-# Utils
-pydantic
