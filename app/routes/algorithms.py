@@ -24,7 +24,7 @@ async def setup(request: Request, payload: SetupRequest):
     if not hasattr(request.app.state, "roads") or overwrite:
         request.app.state.roads = RoadNetwork()
 
-    if not hasattr(request.app.state, "carsCache") or overwrite:
+    if not hasattr(request.app.state, "cars_cache") or overwrite:
         request.app.state.cars_cache = []
 
     if overwrite:
@@ -72,8 +72,10 @@ def dispatch_cars(request: Request, payload: DispatchRequest) -> list[Car]:
 
         # recalculate road and junction in case the car crossed the junction
         # !!! note: possible performance issue - consider optimizing if needed !!!
-        set_current_road(car, request.app.state.roads)
-        set_next_junction(car, junctions)
+        if len(request.app.state.roads) > 0:
+            set_current_road(car, request.app.state.roads)
+            if car.road:
+                set_next_junction(car, junctions)
 
     next_dispatch_in_seconds = payload.next_request_in_seconds
     try:
