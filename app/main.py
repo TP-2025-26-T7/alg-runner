@@ -8,12 +8,12 @@ from app.routes import alg_router
 from app.models import RoadNetwork
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(fast_app: FastAPI):
     # Initialize state
-    app.state.junctions = []
-    app.state.roads = RoadNetwork()
-    app.state.cars_cache = []
-    app.state.hyperparams = {
+    fast_app.state.junctions = []
+    fast_app.state.roads = RoadNetwork()
+    fast_app.state.cars_cache = []
+    fast_app.state.hyperparams = {
         "slowdown_zone": 3.0,
         "slowdown_rate": 0.3,
     }
