@@ -44,16 +44,27 @@ class Junction(BaseModel):
 
     junction_size: float = Field(default=1)
 
-    polygon: Optional[Polygon] = None
+    polygon: list[tuple[float, float]] | None = None
+
+    @cached_property
+    def geometry(self) -> Optional[Polygon]:
+        if self.polygon:
+            return Polygon(self.polygon)
+        return None
 
     @model_validator(mode="after")
     def _default_polygon(self):
         if self.polygon is None:
+            if (not self.x) or (not self.y):
+                return self
+
             half = self.junction_size / 2
-            self.polygon = Polygon([(self.x - half, self.y - half),
-                                    (self.x + half, self.y - half),
-                                    (self.x + half, self.y + half),
-                                    (self.x - half, self.y + half)])
+            self.polygon = [(self.x - half, self.y - half),
+                                     (self.x + half, self.y - half),
+                                     (self.x + half, self.y + half),
+                                     (self.x - half, self.y + half)]
+
+        self.__dict__.pop("geometry", None)
         return self
 
     def __hash__(self):
@@ -65,15 +76,15 @@ class Junction(BaseModel):
         return self.junction_id == other.junction_id
 
     def is_point_inside(self, x: float, y: float) -> bool:
-        if not self.polygon:
+        if not self.geometry:
             return False
-        return self.polygon.contains(Point(x, y))
+        return self.geometry.contains(Point(x, y))
 
     def get_segment_for_point(self, x: float, y: float) -> Literal[None, 1, 2, 3, 4]:
         """
         Works only for junctions with right-angle connections ('+', any rotation of 'T', '-' and 'I' shapes).
         """
-        if not self.polygon or not self.is_point_inside(x, y) or len(self.connected_roads_ids) > 4:
+        if not self.geometry or not self.is_point_inside(x, y) or len(self.connected_roads_ids) > 4:
             return None
 
         if x <= self.x and y > self.y:
