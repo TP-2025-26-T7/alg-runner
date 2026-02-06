@@ -1,9 +1,4 @@
-# API framework and server
-uvicorn
-fastapi
-
-# Functionality
+fastapi>=0.103
+pydantic>=2,<3
+uvicorn[standard]
 shapely
-
-# Utils
-pydantic

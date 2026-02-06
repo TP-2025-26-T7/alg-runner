@@ -54,10 +54,7 @@ class Junction(BaseModel):
 
     @model_validator(mode="after")
     def _default_polygon(self):
-        if self.polygon is None:
-            if (not self.x) or (not self.y):
-                return self
-
+        if self.polygon is None and self.x is not None and self.y is not None:
             half = self.junction_size / 2
             self.polygon = [(self.x - half, self.y - half),
                                      (self.x + half, self.y - half),
