@@ -74,8 +74,9 @@ def dispatch_cars(request: Request, payload: DispatchRequest) -> list[Car]:
         # !!! note: possible performance issue - consider optimizing if needed !!!
         if len(request.app.state.roads) > 0:
             set_current_road(car, request.app.state.roads)
-            if car.road:
-                set_next_junction(car, junctions)
+
+        if car.road:
+            set_next_junction(car, junctions)
 
     next_dispatch_in_seconds = payload.next_request_in_seconds
     try:
