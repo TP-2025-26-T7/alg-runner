@@ -34,7 +34,7 @@ class Road(BaseModel):
 
 
 class Junction(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
     junction_id: constr(min_length=1, max_length=64)
     connected_roads_count: conint(ge=0, le=2**32 - 1) = 0 # uint32_t
@@ -48,7 +48,7 @@ class Junction(BaseModel):
 
     @model_validator(mode="after")
     def _default_polygon(self):
-        if self.polygon is None:
+        if self.polygon is None and self.x is not None and self.y is not None:
             half = self.junction_size / 2
             self.polygon = Polygon([(self.x - half, self.y - half),
                                     (self.x + half, self.y - half),
