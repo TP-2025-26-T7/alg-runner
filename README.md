@@ -66,7 +66,7 @@ uvicorn api.main:app --host YOUR_HOST --port YOUR_PORT
         acceleration: float
         breaking: float // breaking force, deceleration
         target_road_id: string
-    }
+    }[]
     
     next_request_in_seconds: float // optional, time until next dispatch request
 }
