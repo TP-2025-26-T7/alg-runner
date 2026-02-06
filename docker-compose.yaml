@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: alg-runner
     ports:
-      - "8000:8000"
+      - "${PORT:-8000}:8000"
     environment:
       - PYTHONUNBUFFERED=1
     networks:
