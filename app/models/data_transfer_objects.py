@@ -14,6 +14,7 @@ class DispatchRequest(BaseModel):
     )
     
     cars: list[Car] = Field(default_factory=list)
+    junctions: list[Junction] = Field(default_factory=list)
     next_request_in_seconds: Optional[float] = 0.2
 
 
